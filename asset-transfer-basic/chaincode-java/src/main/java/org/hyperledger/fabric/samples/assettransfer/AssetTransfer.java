@@ -20,6 +20,7 @@ import org.hyperledger.fabric.shim.ChaincodeException;
 import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+import org.hyperledger.fabric.shim.ledger.KeyModification;
 
 import com.owlike.genson.Genson;
 
@@ -234,6 +235,31 @@ public final class AssetTransfer implements ContractInterface {
 
         final String response = genson.serialize(queryResults);
 
+        return response;
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String GetAssetHistory(final Context ctx, final String assetID) {
+        ChaincodeStub stub = ctx.getStub();
+        List<String> history = new ArrayList<>();
+
+        // Get the history of the asset by its assetID
+        QueryResultsIterator<KeyModification> results = stub.getHistoryForKey(assetID);
+
+        // Iterate over the results and extract historical states
+        for (KeyModification modification : results) {
+            String record = modification.getStringValue();
+            // Add metadata (if needed), for example, the timestamp or whether it was deleted
+            String historyEntry = String.format("Value: %s, Timestamp: %s, IsDeleted: %s",
+                    record,
+                    modification.getTimestamp(),
+                    modification.isDeleted() ? "Yes" : "No");
+            history.add(historyEntry);
+            System.out.println(String.format("Historical record for asset %s: %s", assetID, historyEntry));
+        }
+
+        // Serialize the history list as JSON and return it
+        final String response = genson.serialize(history);
         return response;
     }
 }

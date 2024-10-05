@@ -192,3 +192,39 @@ func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface
 
 	return assets, nil
 }
+
+// GetAssetHistory retrieves the asset's ownership history by its ID.
+func (s *SmartContract) GetAssetHistory(ctx contractapi.TransactionContextInterface, id string) ([]*HistoryItem, error) {
+    resultsIterator, err := ctx.GetStub().GetHistoryForKey(id)
+    if err != nil {
+        return nil, fmt.Errorf("failed to retrieve history for asset %s: %v", id, err)
+    }
+    defer resultsIterator.Close()
+
+    var history []*HistoryItem
+
+    for resultsIterator.HasNext() {
+        response, err := resultsIterator.Next()
+        if err != nil {
+            return nil, fmt.Errorf("failed to iterate through history: %v", err)
+        }
+
+        historyItem := &HistoryItem{
+            TxId:      response.TxId,
+            Value:     response.Value,
+            Timestamp: response.Timestamp,
+            IsDelete:  response.IsDelete,
+        }
+        history = append(history, historyItem)
+    }
+
+    return history, nil
+}
+
+// HistoryItem defines the structure of an asset's history item
+type HistoryItem struct {
+    TxId      string `json:"txId"`
+    Value     []byte `json:"value"`
+    Timestamp string `json:"timestamp"`
+    IsDelete  bool   `json:"isDelete"`
+}
